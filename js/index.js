@@ -12,15 +12,6 @@ const map = new mapboxgl.Map({
   zoom: 2, // starting zoom
 });
 
-const container = map.getCanvasContainer();
-const svg = d3
-  .select(container)
-  .append("svg")
-  .attr("width", containerWidth)
-  .attr("height", containerHeight)
-  .style("position", "absolute")
-  .style("z-index", 2);
-
 function project(d) {
   return map.project(new mapboxgl.LngLat(d[0], d[1]));
 }
@@ -34,22 +25,46 @@ function render() {
       return project(d).y;
     });
 }
-
 const data = [
   [-74.5, 40.05],
   [-74.45, 40.0],
   [-74.55, 40.0],
 ];
+const container = map.getCanvasContainer();
+const canvas = d3
+  .select(container)
+  .append("canvas")
+  .attr("width", containerWidth)
+  .attr("height", containerHeight)
+  .style("position", "absolute")
+  .style("z-index", 2);
 
-const dots = svg
-  .selectAll("circle")
-  .data(data)
-  .enter()
-  .append("circle")
-  .attr("r", 20)
-  .style("fill", "ff0000");
+var context = canvas.node().getContext("2d");
 
-map.on("viewreset", render);
-map.on("move", render);
-map.on("moveend", render);
-render();
+var customBase = document.createElement("custom");
+var custom = d3.select(customBase); // replacement of SVG
+databind(data);
+
+function databind(data) {
+  custom
+    .selectAll("custom.circle")
+    .data(data)
+    .join((enter) => enter.append("custom").attr("class", "circle"));
+}
+
+function draw() {
+  context.clearRect(0, 0, containerWidth, containerHeight);
+
+  var elements = custom.selectAll("custom.circle");
+  elements.each(function (d, i) {
+    var node = d3.select(this);
+    context.fillStyle = "steelblue";
+    context.beginPath();
+    context.arc(project(d).x, project(d).y, 10, 0, 2 * Math.PI);
+    context.fill();
+  });
+}
+map.on("viewreset", draw);
+map.on("move", draw);
+map.on("moveend", draw);
+draw();
